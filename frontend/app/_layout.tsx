@@ -16,12 +16,12 @@ import {
 import { checkForAppUpdate } from '../utils/appUpdates';
 
 const BOOT_TIMEOUT_MS = 1000;
-const MIN_SPLASH_DURATION_MS = 1500; // Splash shows minimum 1.5 seconds
+const MIN_SPLASH_DURATION_MS = 1000; // Splash shows minimum 1 second
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
-  const { initialized, isCached, loadStoredAuth, token } = useAuthStore();
+  const { initialized, loadStoredAuth, token } = useAuthStore();
   const loadLanguage = usePreferencesStore((state) => state.loadLanguage);
   const router = useRouter();
   const pathname = usePathname();
@@ -52,21 +52,36 @@ export default function RootLayout() {
     return () => clearTimeout(bootTimeout);
   }, [loadStoredAuth, loadLanguage]);
 
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      const auth = useAuthStore.getState();
+      if (!auth.initialized) {
+        setAuthToken(null);
+        useAuthStore.setState({ initialized: true, token: null, user: null });
+      }
+      SplashScreen.hideAsync().catch(() => undefined);
+    }, 7000);
+
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
+  }, []);
+
   // Hide splash only after minimum duration AND initialization complete
   useEffect(() => {
-    if (initialized) {
-      const timeElapsed = Date.now() - splashHideTimeRef.current;
-      if (timeElapsed >= 0) {
-        // Enough time has passed
+    if (!initialized) {
+      return;
+    }
+
+    const timeElapsed = Date.now() - splashHideTimeRef.current;
+    if (timeElapsed >= 0) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    } else {
+      const remainingTime = Math.abs(timeElapsed);
+      const hideTimer = setTimeout(() => {
         SplashScreen.hideAsync().catch(() => undefined);
-      } else {
-        // Wait for remaining time
-        const remainingTime = Math.abs(timeElapsed);
-        const hideTimer = setTimeout(() => {
-          SplashScreen.hideAsync().catch(() => undefined);
-        }, remainingTime);
-        return () => clearTimeout(hideTimer);
-      }
+      }, remainingTime);
+      return () => clearTimeout(hideTimer);
     }
   }, [initialized]);
 

@@ -28,10 +28,10 @@ const backendUrl = apiBaseUrl.replace(/\/api\/?$/i, '');
 
 module.exports = {
   ...appJson.expo,
-  newArchEnabled: false,
+  newArchEnabled: true,
   android: {
     ...(appJson.expo.android || {}),
-    newArchEnabled: false,
+    newArchEnabled: true,
     usesCleartextTraffic: apiBaseUrl.startsWith('http://') || appJson.expo.android?.usesCleartextTraffic,
   },
   extra: {

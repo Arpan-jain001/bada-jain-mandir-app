@@ -56,7 +56,6 @@ coverage/
 *.aab
 
 # firebase
-google-services.json
 GoogleService-Info.plist
 
 # misc

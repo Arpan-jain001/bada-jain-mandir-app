@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "843948811414",
+    "project_id": "bada-jain-mandir-parham-app",
+    "storage_bucket": "bada-jain-mandir-parham-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843948811414:android:5ea995764f248befed4eb7",
+        "android_client_info": {
+          "package_name": "com.parham.jainmandir"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6vBrgE1CEsR0n5hHgDrGbcEJJOx_ooco"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -30,7 +30,7 @@
     "android": {
       "package": "com.parham.jainmandir",
       "googleServicesFile": "./google-services.json",
-
+      "newArchEnabled": true,
       "jsEngine": "hermes",
 
       "versionCode": 1,

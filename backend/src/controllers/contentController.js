@@ -10,6 +10,9 @@ const {
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { uploadImage } = require('../services/cloudinaryService');
+const { sendPushToUsers } = require('../services/notificationService');
+const Notification = require('../models/Notification');
+const logger = require('../utils/logger');
 
 function clean(doc) {
   const obj = doc.toObject ? doc.toObject() : doc;
@@ -17,7 +20,66 @@ function clean(doc) {
   return obj;
 }
 
-function collection(Model, imageFolder, requiredImage = true) {
+const notificationConfig = {
+  gallery: {
+    title: 'New Gallery Photo',
+    message: (doc) => doc.title || 'A new gallery photo has been added.',
+    category: 'announcements'
+  },
+  projects: {
+    title: (doc) => doc.title || 'New Project Update',
+    message: (doc) => doc.description || 'A new project update has been added.',
+    category: 'announcements'
+  },
+  recentWork: {
+    title: (doc) => doc.title || 'New Recent Work',
+    message: (doc) => doc.description || 'A new recent work update has been added.',
+    category: 'announcements'
+  },
+  events: {
+    title: (doc) => doc.title || 'New Event',
+    message: (doc) => doc.description || 'A new temple event has been added.',
+    category: 'festivals/events'
+  },
+  announcements: {
+    title: (doc) => doc.title || 'New Announcement',
+    message: (doc) => doc.message || 'A new temple announcement has been posted.',
+    category: (doc) => doc.category || 'announcements'
+  }
+};
+
+const resolveValue = (value, doc) => (typeof value === 'function' ? value(doc) : value);
+const shouldNotify = (value) => ![false, 'false', '0', 0].includes(value);
+
+async function notifyContentCreate(collectionName, doc, req) {
+  const config = notificationConfig[collectionName];
+  if (!config || !shouldNotify(req.body.notify)) return;
+
+  const payload = {
+    title: resolveValue(config.title, doc),
+    message: resolveValue(config.message, doc),
+    category: resolveValue(config.category, doc)
+  };
+
+  try {
+    const results = await sendPushToUsers(payload);
+    await Notification.create({
+      ...payload,
+      channels: { push: true },
+      results,
+      sent_by: req.user?._id,
+      sent_at: new Date()
+    });
+  } catch (error) {
+    logger.warn('Content notification failed', {
+      collection: collectionName,
+      itemId: doc.id,
+      error: error.message
+    });
+  }
+}
+
+function collection(Model, imageFolder, requiredImage = true, collectionName = '') {
   return {
     list: asyncHandler(async (req, res) => {
       const items = await Model.find({ is_active: { $ne: false } }).sort(req.query.sort || '-created_at').limit(1000);
@@ -33,6 +95,7 @@ function collection(Model, imageFolder, requiredImage = true) {
         throw new ApiError(400, 'Image is required');
       }
       const doc = await Model.create(body);
+      await notifyContentCreate(collectionName, doc, req);
       res.status(201).json(clean(doc));
     }),
     update: asyncHandler(async (req, res) => {
@@ -55,10 +118,10 @@ function collection(Model, imageFolder, requiredImage = true) {
   };
 }
 
-exports.gallery = collection(Gallery, 'temple/gallery');
-exports.projects = collection(Project, 'temple/projects');
-exports.recentWork = collection(RecentWork, 'temple/recent-work');
-exports.committee = collection(CommitteeMember, 'temple/committee');
-exports.events = collection(Event, 'temple/events', false);
-exports.banners = collection(Banner, 'temple/banners');
-exports.announcements = collection(Announcement, 'temple/announcements', false);
+exports.gallery = collection(Gallery, 'temple/gallery', true, 'gallery');
+exports.projects = collection(Project, 'temple/projects', true, 'projects');
+exports.recentWork = collection(RecentWork, 'temple/recent-work', true, 'recentWork');
+exports.committee = collection(CommitteeMember, 'temple/committee', true, 'committee');
+exports.events = collection(Event, 'temple/events', false, 'events');
+exports.banners = collection(Banner, 'temple/banners', true, 'banners');
+exports.announcements = collection(Announcement, 'temple/announcements', false, 'announcements');

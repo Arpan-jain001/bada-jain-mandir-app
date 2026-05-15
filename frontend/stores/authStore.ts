@@ -16,6 +16,7 @@ interface AuthState {
   token: string | null;
   loading: boolean;
   initialized: boolean;
+  isCached: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string, phone?: string, acceptedPrivacyPolicy?: boolean) => Promise<void>;
   logout: () => Promise<void>;
@@ -49,11 +50,17 @@ const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number) =>
     ),
   ]);
 
+// In-memory cache for instant app start
+let cachedToken: string | null = null;
+let cachedUser: User | null = null;
+let cacheLoaded = false;
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
   loading: false,
-  initialized: false,
+  initialized: cacheLoaded,  // Use cache immediately if available
+  isCached: cacheLoaded,
   
   login: async (email: string, password: string) => {
     set({ loading: true });
@@ -69,7 +76,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       await SecureStore.setItemAsync('auth_user', JSON.stringify(user));
       setAuthToken(access_token);
       
-      set({ token: access_token, user, loading: false });
+      // Update cache
+      cachedToken = access_token;
+      cachedUser = user;
+      cacheLoaded = true;
+      
+      set({ token: access_token, user, loading: false, isCached: true });
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -107,7 +119,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       await SecureStore.setItemAsync('auth_user', JSON.stringify(user));
       setAuthToken(access_token);
       
-      set({ token: access_token, user, loading: false });
+      // Update cache
+      cachedToken = access_token;
+      cachedUser = user;
+      cacheLoaded = true;
+      
+      set({ token: access_token, user, loading: false, isCached: true });
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -118,11 +135,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     await SecureStore.deleteItemAsync('auth_token');
     await SecureStore.deleteItemAsync('auth_user');
     setAuthToken(null);
+    cachedToken = null;
+    cachedUser = null;
     set({ user: null, token: null });
   },
   
   setAuthData: (token: string, user: User) => {
     setAuthToken(token);
+    cachedToken = token;
+    cachedUser = user;
     set({ token, user });
   },
 
@@ -135,6 +156,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         is_admin: (response.data?.data || response.data).is_admin ?? (response.data?.data || response.data).role === 'admin',
       };
       await SecureStore.setItemAsync('auth_user', JSON.stringify(updatedUser));
+      cachedUser = updatedUser;
       set({ user: updatedUser, loading: false });
     } catch (error) {
       set({ loading: false });
@@ -144,31 +166,77 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   loadStoredAuth: async () => {
     try {
-      const [token, userStr] = await withTimeout(
-        Promise.all([
-          SecureStore.getItemAsync('auth_token'),
-          SecureStore.getItemAsync('auth_user'),
-        ]),
-        2500
-      );
+      // If cache is already loaded, use it immediately
+      if (cacheLoaded) {
+        if (cachedToken || cachedUser) {
+          if (cachedToken) setAuthToken(cachedToken);
+          set({ 
+            token: cachedToken, 
+            user: cachedUser, 
+            initialized: true,
+            isCached: true 
+          });
+          return;
+        }
+      }
+
+      // Try to load from SecureStore (with timeout for background refresh)
+      const token = await withTimeout(
+        SecureStore.getItemAsync('auth_token'),
+        300  // Ultra-short timeout - fail fast for instant startup
+      ).catch(() => null);
       
-      if (token && userStr) {
-        const storedUser = JSON.parse(userStr);
-        const user = {
-          ...storedUser,
-          is_admin: storedUser.is_admin ?? storedUser.role === 'admin',
-        };
-        setAuthToken(token);
-        set({ token, user, initialized: true });
+      if (!token) {
+        cachedToken = null;
+        cachedUser = null;
+        cacheLoaded = true;
+        set({ initialized: true, token: null, user: null, isCached: true });
+        return;
+      }
+
+      cachedToken = token;
+      
+      // Try to load user data (with timeout)
+      const userStr = await withTimeout(
+        SecureStore.getItemAsync('auth_user'),
+        300
+      ).catch(() => null);
+      
+      if (userStr) {
+        try {
+          const storedUser = JSON.parse(userStr);
+          const user = {
+            ...storedUser,
+            is_admin: storedUser.is_admin ?? storedUser.role === 'admin',
+          };
+          cachedUser = user;
+          setAuthToken(token);
+          cacheLoaded = true;
+          set({ token, user, initialized: true, isCached: true });
+        } catch {
+          cachedUser = null;
+          setAuthToken(token);
+          cacheLoaded = true;
+          set({ token, user: null, initialized: true, isCached: true });
+        }
       } else {
-        set({ initialized: true });
+        cachedUser = null;
+        setAuthToken(token);
+        cacheLoaded = true;
+        set({ token, user: null, initialized: true, isCached: true });
       }
     } catch (error) {
       console.error('Error loading stored auth:', error);
-      await SecureStore.deleteItemAsync('auth_token').catch(() => undefined);
-      await SecureStore.deleteItemAsync('auth_user').catch(() => undefined);
+      // Clear corrupted data
+      await Promise.all([
+        SecureStore.deleteItemAsync('auth_token').catch(() => undefined),
+        SecureStore.deleteItemAsync('auth_user').catch(() => undefined),
+      ]);
+      cachedToken = null;
+      cachedUser = null;
       setAuthToken(null);
-      set({ token: null, user: null, initialized: true });
+      cacheLoaded = true;
+      set({ token: null, user: null, initialized: true, isCached: true });
     }
   },
 }));

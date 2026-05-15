@@ -180,12 +180,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       }
 
-      // Try to load from SecureStore (with timeout for background refresh)
-      const token = await withTimeout(
-        SecureStore.getItemAsync('auth_token'),
-        300  // Ultra-short timeout - fail fast for instant startup
-      ).catch(() => null);
-      
+      // Try to load from SecureStore reliably (do not fail fast)
+      const token = await SecureStore.getItemAsync('auth_token').catch(() => null);
+
       if (!token) {
         cachedToken = null;
         cachedUser = null;
@@ -195,13 +192,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       cachedToken = token;
-      
-      // Try to load user data (with timeout)
-      const userStr = await withTimeout(
-        SecureStore.getItemAsync('auth_user'),
-        300
-      ).catch(() => null);
-      
+
+      // Try to load user data (no artificial timeout)
+      const userStr = await SecureStore.getItemAsync('auth_user').catch(() => null);
+
       if (userStr) {
         try {
           const storedUser = JSON.parse(userStr);

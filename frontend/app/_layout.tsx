@@ -1,149 +1,130 @@
-import { Stack, usePathname, useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Alert, BackHandler, Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+
+import { useEffect, useState } from 'react';
+
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 import * as SplashScreen from 'expo-splash-screen';
+
 import { useAuthStore } from '../stores/authStore';
+
 import { usePreferencesStore } from '../stores/preferencesStore';
+
 import { setAuthToken } from '../utils/api';
-import { silentHealthCheck } from '../utils/healthCheck';
-import {
-  attachNotificationListeners,
-  clearNotificationBadge,
-  registerForPushNotifications,
-  requestInitialNotificationPermission,
-} from '../utils/notifications';
-import { checkForAppUpdate } from '../utils/appUpdates';
 
-const BOOT_TIMEOUT_MS = 1000;
-const MIN_SPLASH_DURATION_MS = 1000; // Splash shows minimum 1 second
-
-SplashScreen.preventAutoHideAsync().catch(() => undefined);
+// 🚀 HOLD native splash
+SplashScreen.preventAutoHideAsync().catch(
+  () => {}
+);
 
 export default function RootLayout() {
-  const { initialized, loadStoredAuth, token } = useAuthStore();
-  const loadLanguage = usePreferencesStore((state) => state.loadLanguage);
   const router = useRouter();
-  const pathname = usePathname();
-  const initStartedRef = useRef(false);
-  const splashHideTimeRef = useRef<number>(0);
 
-  // Ultra-fast initialization - instant startup
+  const [ready, setReady] = useState(false);
+
+  const loadStoredAuth = useAuthStore(
+    (s) => s.loadStoredAuth
+  );
+
+  const token = useAuthStore((s) => s.token);
+
+  const user = useAuthStore((s) => s.user);
+
+  const loadLanguage = usePreferencesStore(
+    (s) => s.loadLanguage
+  );
+
+  // 🚀 startup
   useEffect(() => {
-    if (initStartedRef.current) return;
-    initStartedRef.current = true;
+    let mounted = true;
 
-    // Record when we want to hide splash (minimum duration)
-    splashHideTimeRef.current = Date.now() + MIN_SPLASH_DURATION_MS;
+    const prepare = async () => {
+      try {
+        await Promise.all([
+          loadStoredAuth(),
+          loadLanguage(),
+        ]);
 
-    // Start loading in background - fire and forget
-    loadStoredAuth().catch(() => {});
-    loadLanguage().catch(() => undefined);
-
-    // Timeout as safety net only
-    const bootTimeout = setTimeout(() => {
-      const auth = useAuthStore.getState();
-      if (!auth.initialized) {
-        setAuthToken(null);
-        useAuthStore.setState({ initialized: true, token: null, user: null });
+        if (token) {
+          setAuthToken(token);
+        }
+      } catch (e) {
+        console.log(e);
+      } finally {
+        if (mounted) {
+          setReady(true);
+        }
       }
-    }, BOOT_TIMEOUT_MS);
+    };
 
-    return () => clearTimeout(bootTimeout);
-  }, [loadStoredAuth, loadLanguage]);
-
-  useEffect(() => {
-    const fallbackTimer = setTimeout(() => {
-      const auth = useAuthStore.getState();
-      if (!auth.initialized) {
-        setAuthToken(null);
-        useAuthStore.setState({ initialized: true, token: null, user: null });
-      }
-      SplashScreen.hideAsync().catch(() => undefined);
-    }, 7000);
+    prepare();
 
     return () => {
-      clearTimeout(fallbackTimer);
+      mounted = false;
     };
   }, []);
 
-  // Hide splash only after minimum duration AND initialization complete
+  // 🚀 hide splash ONLY when app fully ready
   useEffect(() => {
-    if (!initialized) {
-      return;
-    }
+    if (!ready) return;
 
-    const timeElapsed = Date.now() - splashHideTimeRef.current;
-    if (timeElapsed >= 0) {
-      SplashScreen.hideAsync().catch(() => undefined);
-    } else {
-      const remainingTime = Math.abs(timeElapsed);
-      const hideTimer = setTimeout(() => {
-        SplashScreen.hideAsync().catch(() => undefined);
-      }, remainingTime);
-      return () => clearTimeout(hideTimer);
-    }
-  }, [initialized]);
+    const init = async () => {
+      try {
+        if (user) {
+          router.replace('/(protected)/user');
+        } else {
+          router.replace('/auth/login');
+        }
 
-  useEffect(() => {
-    if (Platform.OS !== 'android') {
-      return undefined;
-    }
-
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (pathname !== '/user' && pathname !== '/admin' && pathname !== '/auth/login') {
-        router.replace(pathname.startsWith('/admin') ? '/admin' : '/user');
-        return true;
+        // slight delay for smooth transition
+        setTimeout(async () => {
+          await SplashScreen.hideAsync();
+        }, 300);
+      } catch (e) {
+        console.log(e);
       }
-      Alert.alert('Exit App', 'Are you sure you want to exit?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() },
-      ]);
-      return true;
-    });
+    };
 
-    return () => subscription.remove();
-  }, [pathname, router]);
+    init();
+  }, [ready]);
 
-  // Hide splash and start background tasks once initialized
-  useEffect(() => {
-    if (initialized) {
-      // Set token in API client if available
-      if (token) {
-        setAuthToken(token);
-      }
-
-      // All these tasks run in background - don't block UI
-      silentHealthCheck().catch(() => undefined);
-      requestInitialNotificationPermission().catch(() => undefined);
-      checkForAppUpdate().catch(() => undefined);
-
-      if (token) {
-        registerForPushNotifications().catch(() => undefined);
-      }
-    }
-  }, [initialized, token]);
-
-  useEffect(() => {
-    clearNotificationBadge();
-    return attachNotificationListeners(router);
-  }, [router]);
-
-  // Always show splash screen - UI waits for splash to hide
-  if (!initialized) {
-    return null; // Keep splash screen showing
+  // 🚀 KEEP native splash visible
+  if (!ready) {
+    return null;
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }}>
+    <GestureHandlerRootView
+      style={{ flex: 1 }}
+    >
+      <Stack
+        screenOptions={{
+          headerShown: false,
+
+          animation: 'fade',
+
+          contentStyle: {
+            backgroundColor: '#ffffff',
+          },
+        }}
+      >
         <Stack.Screen name="index" />
-        <Stack.Screen name="auth/login" />
-        <Stack.Screen name="auth/signup" />
-        <Stack.Screen name="auth/forgot-password" />
-        <Stack.Screen name="auth/privacy-policy" />
-        <Stack.Screen name="user" />
-        <Stack.Screen name="admin" />
+
+        <Stack.Screen
+          name="auth/login"
+        />
+
+        <Stack.Screen
+          name="auth/signup"
+        />
+
+        <Stack.Screen
+          name="auth/forgot-password"
+        />
+
+        <Stack.Screen
+          name="(protected)"
+        />
       </Stack>
     </GestureHandlerRootView>
   );

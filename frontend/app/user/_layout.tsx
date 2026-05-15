@@ -46,7 +46,7 @@ export default function UserLayout() {
         }}
       />
       <Tabs.Screen
-        name="committee"
+        name="people"
         options={{
           title: t('committee'),
           tabBarIcon: ({ color, size }) => (
@@ -55,7 +55,7 @@ export default function UserLayout() {
         }}
       />
       <Tabs.Screen
-        name="donations"
+        name="heart"
         options={{
           title: t('donate'),
           tabBarIcon: ({ color, size }) => (
@@ -64,7 +64,7 @@ export default function UserLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="person-circle"
         options={{
           title: t('profile'),
           tabBarIcon: ({ color, size }) => (
@@ -82,7 +82,7 @@ export default function UserLayout() {
         }}
       />
       <Tabs.Screen
-        name="contact"
+        name="call"
         options={{
           title: t('contact'),
           tabBarIcon: ({ color, size }) => (

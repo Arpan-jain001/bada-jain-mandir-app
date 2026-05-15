@@ -1,8 +1,11 @@
 {
   "expo": {
     "name": "Bada Jain Mandir Parham",
+
     "slug": "bada-jain-mandir-parham",
+
     "version": "1.0.0",
+
     "orientation": "portrait",
 
     "icon": "./assets/images/app-image.png",
@@ -11,17 +14,15 @@
 
     "userInterfaceStyle": "automatic",
 
-    
-
     "splash": {
       "image": "./assets/images/splash-image.png",
+
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+
+      "backgroundColor": "#ffffff"
     },
 
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
 
     "ios": {
       "supportsTablet": true
@@ -29,36 +30,25 @@
 
     "android": {
       "package": "com.parham.jainmandir",
+
       "googleServicesFile": "./google-services.json",
-      "newArchEnabled": true,
-      "jsEngine": "hermes",
-
-      "versionCode": 1,
-
-      "permissions": [
-        "POST_NOTIFICATIONS",
-        "INTERNET"
-      ],
-      "blockedPermissions": [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_PHONE_STATE"
-      ],
 
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
-        "backgroundColor": "#000000"
+
+        "backgroundColor": "#ffffff"
       },
 
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+
+      "softwareKeyboardLayoutMode": "pan"
     },
 
     "web": {
       "bundler": "metro",
+
       "output": "static",
+
       "favicon": "./assets/images/logo.png"
     },
 
@@ -71,21 +61,18 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-image.png",
-          "imageWidth": 200,
+
+          "imageWidth": 220,
+
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+
+          "backgroundColor": "#ffffff"
         }
       ]
     ],
 
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-  "eas": {
-    "projectId": "d4f03af5-2b0a-4a23-bda8-e93cb3fc6ee5"
-  }
-}
-
+    }
   }
 }

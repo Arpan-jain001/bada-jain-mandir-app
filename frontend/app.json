@@ -1,0 +1,89 @@
+{
+  "expo": {
+    "name": "Bada Jain Mandir Parham",
+    "slug": "bada-jain-mandir-parham",
+    "version": "1.0.0",
+    "orientation": "portrait",
+
+    "icon": "./assets/images/app-image.png",
+
+    "scheme": "frontend",
+
+    "userInterfaceStyle": "automatic",
+
+    "newArchEnabled": true,
+
+    "splash": {
+      "image": "./assets/images/splash-image.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+
+    "ios": {
+      "supportsTablet": true
+    },
+
+    "android": {
+      "package": "com.parham.jainmandir",
+
+      "versionCode": 1,
+
+      "permissions": [
+        "NOTIFICATIONS",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET"
+      ],
+
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#000000"
+      },
+
+      "edgeToEdgeEnabled": true
+    },
+
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/logo.png"
+    },
+
+    "plugins": [
+      "expo-router",
+
+      "expo-notifications",
+
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Bada Jain Mandir Parham to access your location."
+        }
+      ],
+
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-image.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ]
+    ],
+
+    "experiments": {
+      "typedRoutes": true
+    },
+
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}

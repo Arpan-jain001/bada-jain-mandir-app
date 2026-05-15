@@ -84,9 +84,55 @@ async function sendEmailToUsers({ title, message, category }) {
   return { sent, errors };
 }
 
+async function sendExpoPushNotifications({ tokens, title, message, category }) {
+  if (tokens.length === 0) return { sent: 0, errors: [] };
+
+  const chunks = [];
+  for (let i = 0; i < tokens.length; i += 100) {
+    chunks.push(tokens.slice(i, i + 100));
+  }
+
+  let sent = 0;
+  const errors = [];
+  for (const chunk of chunks) {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-encoding': 'gzip, deflate',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(
+        chunk.map((to) => ({
+          to,
+          title,
+          body: message,
+          sound: 'default',
+          priority: 'high',
+          channelId: env.fcmAndroidChannelId,
+          data: { category: category || 'announcements', type: category || 'announcements' }
+        }))
+      )
+    });
+
+    const json = await response.json().catch(() => ({}));
+    const receipts = Array.isArray(json.data) ? json.data : [];
+    sent += receipts.filter((item) => item.status === 'ok').length;
+    errors.push(
+      ...receipts
+        .filter((item) => item.status === 'error')
+        .map((item) => item.message || item.details?.error || 'Expo push failed')
+    );
+    if (!response.ok && receipts.length === 0) {
+      errors.push(json.errors?.[0]?.message || `Expo push failed with HTTP ${response.status}`);
+    }
+  }
+
+  return { sent, errors };
+}
+
 async function sendPushToUsers({ title, message, category }) {
   const app = getFirebaseApp();
-  if (!app) return { sent: 0, errors: ['Firebase Admin is not configured'] };
 
   const preferenceQuery =
     category === 'updates'
@@ -102,34 +148,47 @@ async function sendPushToUsers({ title, message, category }) {
     ...preferenceQuery
   });
 
-  const tokens = [...new Set(users.flatMap((user) => user.fcmTokens.map((entry) => entry.token)).filter(Boolean))];
-  if (tokens.length === 0) return { sent: 0, errors: [] };
+  const fcmTokens = [...new Set(users.flatMap((user) => user.fcmTokens.map((entry) => entry.token)).filter(Boolean))];
+  const expoTokens = [
+    ...new Set(users.flatMap((user) => user.fcmTokens.map((entry) => entry.expoPushToken)).filter(Boolean))
+  ];
+  if (fcmTokens.length === 0 && expoTokens.length === 0) return { sent: 0, errors: [] };
 
-  const response = await admin.messaging().sendEachForMulticast({
-    tokens,
-    notification: { title, body: message },
-    data: { category: category || 'announcements', type: category || 'announcements' },
-    android: {
-      priority: 'high',
-      notification: { channelId: env.fcmAndroidChannelId, sound: 'default' }
+  let fcmSent = 0;
+  const errors = [];
+  if (app && fcmTokens.length > 0) {
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens: fcmTokens,
+      notification: { title, body: message },
+      data: { category: category || 'announcements', type: category || 'announcements' },
+      android: {
+        priority: 'high',
+        notification: { channelId: env.fcmAndroidChannelId, sound: 'default' }
+      }
+    });
+
+    const invalidTokens = [];
+    response.responses.forEach((item, index) => {
+      const code = item.error?.code || '';
+      if (code.includes('registration-token-not-registered') || code.includes('invalid-registration-token')) {
+        invalidTokens.push(fcmTokens[index]);
+      }
+    });
+
+    if (invalidTokens.length > 0) {
+      await User.updateMany({}, { $pull: { fcmTokens: { token: { $in: invalidTokens } } } });
     }
-  });
 
-  const invalidTokens = [];
-  response.responses.forEach((item, index) => {
-    const code = item.error?.code || '';
-    if (code.includes('registration-token-not-registered') || code.includes('invalid-registration-token')) {
-      invalidTokens.push(tokens[index]);
-    }
-  });
-
-  if (invalidTokens.length > 0) {
-    await User.updateMany({}, { $pull: { fcmTokens: { token: { $in: invalidTokens } } } });
+    fcmSent = response.successCount;
+    errors.push(...response.responses.filter((item) => !item.success).map((item) => item.error?.message || 'Push failed'));
+  } else if (fcmTokens.length > 0) {
+    errors.push('Firebase Admin is not configured');
   }
 
+  const expo = await sendExpoPushNotifications({ tokens: expoTokens, title, message, category });
   return {
-    sent: response.successCount,
-    errors: response.responses.filter((item) => !item.success).map((item) => item.error?.message || 'Push failed')
+    sent: fcmSent + expo.sent,
+    errors: [...errors, ...expo.errors]
   };
 }
 

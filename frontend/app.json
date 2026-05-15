@@ -7,7 +7,7 @@
 
     "icon": "./assets/images/app-image.png",
 
-    "scheme": "frontend",
+    "scheme": "badajainmandirparham",
 
     "userInterfaceStyle": "automatic",
 
@@ -29,11 +29,13 @@
 
     "android": {
       "package": "com.parham.jainmandir",
+      "googleServicesFile": "./google-services.json",
 
       "versionCode": 1,
 
       "permissions": [
         "NOTIFICATIONS",
+        "POST_NOTIFICATIONS",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "INTERNET"

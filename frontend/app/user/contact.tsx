@@ -44,7 +44,7 @@ export default function ContactScreen() {
     try {
       await saveNotificationPreferences(next);
       if (key === 'push' && value) {
-        await registerForPushNotifications();
+        await registerForPushNotifications({ forcePrompt: true });
       }
     } catch (error) {
       setPreferences(preferences);

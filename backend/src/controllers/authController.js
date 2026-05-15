@@ -74,8 +74,10 @@ exports.updatePreferences = asyncHandler(async (req, res) => {
 
 exports.registerFcmToken = asyncHandler(async (req, res) => {
   const { token, tokenType, expoPushToken, platform, appVersion } = req.body;
-  if (!token) throw new ApiError(400, 'Device token is required');
-  req.user.fcmTokens = req.user.fcmTokens.filter((entry) => entry.token !== token);
+  if (!token && !expoPushToken) throw new ApiError(400, 'Device token is required');
+  req.user.fcmTokens = req.user.fcmTokens.filter(
+    (entry) => entry.token !== token && entry.expoPushToken !== expoPushToken
+  );
   req.user.fcmTokens.push({ token, tokenType, expoPushToken, platform, appVersion, lastSeenAt: new Date() });
   await req.user.save();
   res.json({ message: 'Device token registered' });

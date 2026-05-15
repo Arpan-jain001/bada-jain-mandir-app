@@ -13,6 +13,11 @@ const CHANNEL_DESCRIPTION =
   process.env.FCM_ANDROID_CHANNEL_DESCRIPTION ||
   'Announcements, updates and alerts from the temple app';
 const NOTIFICATION_PROMPT_VERSION_KEY = 'notification_permission_prompt_version';
+const NOTIFICATION_APP_PROMPT_KEY = 'notification_app_prompt_decision';
+const getEasProjectId = () => {
+  const projectId = extra.eas?.projectId || extra.EXPO_PUBLIC_EAS_PROJECT_ID || process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+  return typeof projectId === 'string' && projectId && !projectId.startsWith('YOUR_') ? projectId : undefined;
+};
 
 type ExpoNotifications = typeof import('expo-notifications');
 let notificationsModule: ExpoNotifications | null = null;
@@ -76,17 +81,54 @@ export const configureAndroidNotificationChannel = async () => {
   });
 };
 
-export const registerForPushNotifications = async () => {
+const askAppLevelNotificationPermission = async (forcePrompt = false) => {
+  const storedDecision = await SecureStore.getItemAsync(NOTIFICATION_APP_PROMPT_KEY);
+  if (storedDecision === 'allow' && !forcePrompt) return true;
+
+  return new Promise<boolean>((resolve) => {
+    Alert.alert(
+      'Allow Notifications',
+      'Get temple announcements, events, live darshan updates and app alerts.',
+      [
+        {
+          text: "Don't Allow",
+          style: 'cancel',
+          onPress: async () => {
+            await SecureStore.deleteItemAsync(NOTIFICATION_APP_PROMPT_KEY);
+            resolve(false);
+          },
+        },
+        {
+          text: 'Allow',
+          onPress: async () => {
+            await SecureStore.setItemAsync(NOTIFICATION_APP_PROMPT_KEY, 'allow');
+            resolve(true);
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  });
+};
+
+export const registerForPushNotifications = async (options: { forcePrompt?: boolean } = {}) => {
   if (isExpoGo) return null;
   const Notifications = await getNotifications();
   if (!Notifications) return null;
   await configureAndroidNotificationChannel();
 
   const preferences = await loadNotificationPreferences();
+  if (!preferences.push && !options.forcePrompt) return null;
+
+  const userAcceptedAppPrompt = await askAppLevelNotificationPermission(!!options.forcePrompt);
+  if (!userAcceptedAppPrompt) {
+    await saveNotificationPreferences({ ...preferences, push: false });
+    return null;
+  }
+
   const appVersion = Constants.expoConfig?.version || 'unknown';
   const lastPromptVersion = await SecureStore.getItemAsync(NOTIFICATION_PROMPT_VERSION_KEY);
   const shouldPromptThisVersion = lastPromptVersion !== appVersion;
-  if (!preferences.push && !shouldPromptThisVersion) return null;
 
   const current = await Notifications.getPermissionsAsync();
   let finalStatus = current.status;
@@ -105,14 +147,19 @@ export const registerForPushNotifications = async () => {
     await saveNotificationPreferences({ ...preferences, push: true });
   }
 
-  const deviceToken = await Notifications.getDevicePushTokenAsync();
-  const expoToken = await Notifications.getExpoPushTokenAsync({
-    projectId: extra.eas?.projectId || extra.FIREBASE_PROJECT_ID || process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  }).catch(() => null);
+  const deviceToken = await Notifications.getDevicePushTokenAsync().catch(() => null);
+  const easProjectId = getEasProjectId();
+  const expoToken = await Notifications.getExpoPushTokenAsync(
+    easProjectId ? { projectId: easProjectId } : undefined
+  ).catch(() => null);
+
+  if (!deviceToken?.data && !expoToken?.data) {
+    return null;
+  }
 
   const tokenPayload = {
-    token: deviceToken.data,
-    tokenType: deviceToken.type,
+    token: deviceToken?.data,
+    tokenType: deviceToken?.type,
     expoPushToken: expoToken?.data,
     platform: Platform.OS,
     appVersion,

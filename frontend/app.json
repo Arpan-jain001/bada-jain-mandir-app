@@ -11,7 +11,7 @@
 
     "userInterfaceStyle": "automatic",
 
-    "newArchEnabled": true,
+    
 
     "splash": {
       "image": "./assets/images/splash-image.png",
@@ -30,6 +30,8 @@
     "android": {
       "package": "com.parham.jainmandir",
       "googleServicesFile": "./google-services.json",
+
+      "jsEngine": "hermes",
 
       "versionCode": 1,
 
@@ -81,11 +83,11 @@
     "experiments": {
       "typedRoutes": true
     },
-
     "extra": {
-      "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
-      }
-    }
+  "eas": {
+    "projectId": "d4f03af5-2b0a-4a23-bda8-e93cb3fc6ee5"
+  }
+}
+
   }
 }

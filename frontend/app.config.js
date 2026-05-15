@@ -3,6 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const envPath = path.resolve(__dirname, '.env');
+const DEFAULT_API_BASE_URL = 'https://bada-jain-mandir-app-1357.onrender.com/api';
+
 if (fs.existsSync(envPath)) {
   const envFile = fs.readFileSync(envPath, 'utf8');
   for (const line of envFile.split(/\r?\n/)) {
@@ -19,12 +21,9 @@ const normalizeApiBaseUrl = (url) => {
 
 const apiBaseUrl = normalizeApiBaseUrl(
   process.env.EXPO_PUBLIC_API_BASE_URL ||
-    process.env.API_BASE_URL ||
-    process.env.EXPO_PUBLIC_BACKEND_URL ||
-    appJson.expo.extra?.API_BASE_URL ||
-    'http://localhost:5000/api'
+    appJson.expo.extra?.EXPO_PUBLIC_API_BASE_URL ||
+    DEFAULT_API_BASE_URL
 );
-const backendUrl = apiBaseUrl.replace(/\/api\/?$/i, '');
 
 module.exports = {
   ...appJson.expo,
@@ -36,9 +35,7 @@ module.exports = {
   },
   extra: {
     ...(appJson.expo.extra || {}),
-    EXPO_PUBLIC_BACKEND_URL: backendUrl,
     EXPO_PUBLIC_API_BASE_URL: apiBaseUrl,
-    API_BASE_URL: apiBaseUrl,
     ANDROID_PACKAGE_NAME: process.env.ANDROID_PACKAGE_NAME || appJson.expo.extra?.ANDROID_PACKAGE_NAME,
     INDUS_INSTALLER_PACKAGE: process.env.INDUS_INSTALLER_PACKAGE || appJson.expo.extra?.INDUS_INSTALLER_PACKAGE,
     INDUS_APPSTORE_URL: process.env.INDUS_APPSTORE_URL || appJson.expo.extra?.INDUS_APPSTORE_URL,

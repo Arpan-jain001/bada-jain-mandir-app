@@ -12,8 +12,7 @@ const CHANNEL_DESCRIPTION =
   extra.FCM_ANDROID_CHANNEL_DESCRIPTION ||
   process.env.FCM_ANDROID_CHANNEL_DESCRIPTION ||
   'Announcements, updates and alerts from the temple app';
-const NOTIFICATION_PROMPT_VERSION_KEY = 'notification_permission_prompt_version';
-const NOTIFICATION_APP_PROMPT_KEY = 'notification_app_prompt_decision';
+const NOTIFICATION_PERMISSION_STATUS_KEY = 'notification_permission_status';
 const getEasProjectId = () => {
   const projectId = extra.eas?.projectId || extra.EXPO_PUBLIC_EAS_PROJECT_ID || process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
   return typeof projectId === 'string' && projectId && !projectId.startsWith('YOUR_') ? projectId : undefined;
@@ -81,34 +80,33 @@ export const configureAndroidNotificationChannel = async () => {
   });
 };
 
-const askAppLevelNotificationPermission = async (forcePrompt = false) => {
-  const storedDecision = await SecureStore.getItemAsync(NOTIFICATION_APP_PROMPT_KEY);
-  if (storedDecision === 'allow' && !forcePrompt) return true;
+export const requestInitialNotificationPermission = async () => {
+  if (isExpoGo) return null;
+  const Notifications = await getNotifications();
+  if (!Notifications) return null;
+  await configureAndroidNotificationChannel();
 
-  return new Promise<boolean>((resolve) => {
+  const current = await Notifications.getPermissionsAsync();
+  if (current.status === 'granted' || !current.canAskAgain) {
+    await SecureStore.setItemAsync(NOTIFICATION_PERMISSION_STATUS_KEY, current.status);
+    return current.status;
+  }
+
+  const requested = await Notifications.requestPermissionsAsync();
+  await SecureStore.setItemAsync(NOTIFICATION_PERMISSION_STATUS_KEY, requested.status);
+
+  if (requested.status !== 'granted') {
     Alert.alert(
-      'Allow Notifications',
-      'Get temple announcements, events, live darshan updates and app alerts.',
+      'Notifications Disabled',
+      'Enable notifications to receive temple announcements, live darshan updates, app updates and donation alerts.',
       [
-        {
-          text: "Don't Allow",
-          style: 'cancel',
-          onPress: async () => {
-            await SecureStore.deleteItemAsync(NOTIFICATION_APP_PROMPT_KEY);
-            resolve(false);
-          },
-        },
-        {
-          text: 'Allow',
-          onPress: async () => {
-            await SecureStore.setItemAsync(NOTIFICATION_APP_PROMPT_KEY, 'allow');
-            resolve(true);
-          },
-        },
-      ],
-      { cancelable: false }
+        { text: 'Not Now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => undefined) },
+      ]
     );
-  });
+  }
+
+  return requested.status;
 };
 
 export const registerForPushNotifications = async (options: { forcePrompt?: boolean } = {}) => {
@@ -120,20 +118,11 @@ export const registerForPushNotifications = async (options: { forcePrompt?: bool
   const preferences = await loadNotificationPreferences();
   if (!preferences.push && !options.forcePrompt) return null;
 
-  const userAcceptedAppPrompt = await askAppLevelNotificationPermission(!!options.forcePrompt);
-  if (!userAcceptedAppPrompt) {
-    await saveNotificationPreferences({ ...preferences, push: false });
-    return null;
-  }
-
   const appVersion = Constants.expoConfig?.version || 'unknown';
-  const lastPromptVersion = await SecureStore.getItemAsync(NOTIFICATION_PROMPT_VERSION_KEY);
-  const shouldPromptThisVersion = lastPromptVersion !== appVersion;
 
   const current = await Notifications.getPermissionsAsync();
   let finalStatus = current.status;
-  if (current.status !== 'granted' && shouldPromptThisVersion) {
-    await SecureStore.setItemAsync(NOTIFICATION_PROMPT_VERSION_KEY, appVersion);
+  if (current.status !== 'granted' && (current.canAskAgain || options.forcePrompt)) {
     const requested = await Notifications.requestPermissionsAsync();
     finalStatus = requested.status;
   }

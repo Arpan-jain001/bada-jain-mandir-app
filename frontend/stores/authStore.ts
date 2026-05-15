@@ -41,6 +41,14 @@ const normalizeAuthResponse = (data: any): { access_token: string; user: User } 
   return { access_token, user };
 };
 
+const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number) =>
+  Promise.race<T>([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('SecureStore read timed out')), timeoutMs)
+    ),
+  ]);
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
@@ -136,8 +144,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   
   loadStoredAuth: async () => {
     try {
-      const token = await SecureStore.getItemAsync('auth_token');
-      const userStr = await SecureStore.getItemAsync('auth_user');
+      const [token, userStr] = await withTimeout(
+        Promise.all([
+          SecureStore.getItemAsync('auth_token'),
+          SecureStore.getItemAsync('auth_user'),
+        ]),
+        2500
+      );
       
       if (token && userStr) {
         const storedUser = JSON.parse(userStr);
@@ -152,7 +165,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (error) {
       console.error('Error loading stored auth:', error);
-      set({ initialized: true });
+      await SecureStore.deleteItemAsync('auth_token').catch(() => undefined);
+      await SecureStore.deleteItemAsync('auth_user').catch(() => undefined);
+      setAuthToken(null);
+      set({ token: null, user: null, initialized: true });
     }
   },
 }));

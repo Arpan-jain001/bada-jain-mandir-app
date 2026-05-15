@@ -1,26 +1,53 @@
 import { Stack, usePathname, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert, BackHandler, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../stores/authStore';
 import { usePreferencesStore } from '../stores/preferencesStore';
 import { setAuthToken } from '../utils/api';
-import { attachNotificationListeners, clearNotificationBadge, registerForPushNotifications } from '../utils/notifications';
+import {
+  attachNotificationListeners,
+  clearNotificationBadge,
+  registerForPushNotifications,
+  requestInitialNotificationPermission,
+} from '../utils/notifications';
 import { checkForAppUpdate } from '../utils/appUpdates';
 
-SplashScreen.preventAutoHideAsync();
+const BOOT_TIMEOUT_MS = 3500;
+
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const { initialized, loadStoredAuth, token } = useAuthStore();
   const loadLanguage = usePreferencesStore((state) => state.loadLanguage);
   const router = useRouter();
   const pathname = usePathname();
+  const bootTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Load stored auth on app start
-    loadStoredAuth();
-    loadLanguage();
+    bootTimeoutRef.current = setTimeout(() => {
+      const auth = useAuthStore.getState();
+      if (!auth.initialized) {
+        setAuthToken(null);
+        useAuthStore.setState({ initialized: true, token: null, user: null });
+      }
+    }, BOOT_TIMEOUT_MS);
+
+    loadStoredAuth().finally(() => {
+      if (bootTimeoutRef.current) {
+        clearTimeout(bootTimeoutRef.current);
+        bootTimeoutRef.current = null;
+      }
+    });
+    loadLanguage().catch(() => undefined);
+
+    return () => {
+      if (bootTimeoutRef.current) {
+        clearTimeout(bootTimeoutRef.current);
+        bootTimeoutRef.current = null;
+      }
+    };
   }, [loadLanguage, loadStoredAuth]);
 
   useEffect(() => {
@@ -49,11 +76,9 @@ export default function RootLayout() {
       if (token) {
         setAuthToken(token);
       }
-      // Hide splash screen once initialized
-      setTimeout(() => {
-        SplashScreen.hideAsync();
-      }, 100);
+      SplashScreen.hideAsync().catch(() => undefined);
 
+      requestInitialNotificationPermission().catch(() => undefined);
       checkForAppUpdate().catch(() => undefined);
 
       if (token) {

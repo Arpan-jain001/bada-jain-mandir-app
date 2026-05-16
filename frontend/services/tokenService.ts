@@ -7,7 +7,7 @@
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { api } from './api';
+import { api } from '../utils/api';
 
 const TOKEN_DATA_KEY = 'notification_token_data';
 const TOKEN_EXPIRY_DAYS = 30;
@@ -185,7 +185,7 @@ export function validateTokenData(data: any): data is StoredTokenData {
  */
 export async function clearTokenData(): Promise<boolean> {
   try {
-    await SecureStore.removeItemAsync(TOKEN_DATA_KEY);
+    await SecureStore.deleteItemAsync(TOKEN_DATA_KEY);
     log.info('Token data cleared');
     return true;
   } catch (error) {

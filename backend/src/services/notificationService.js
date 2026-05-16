@@ -64,7 +64,16 @@ function buildNotificationEmailHtml({ title, message, category }) {
 }
 
 async function sendEmailToUsers({ title, message, category }) {
-  const users = await User.find({ is_admin: false, 'notificationPreferences.email': true, email: { $exists: true } });
+  // Check delivery mode preferences
+  const users = await User.find({ 
+    is_admin: false, 
+    'notificationPreferences.emailEnabled': true, 
+    email: { $exists: true },
+    $or: [
+      { 'notificationPreferences.deliveryMode': 'email' },
+      { 'notificationPreferences.deliveryMode': 'both' }
+    ]
+  });
   let sent = 0;
   const errors = [];
   const html = buildNotificationEmailHtml({ title, message, category });
@@ -134,17 +143,29 @@ async function sendExpoPushNotifications({ tokens, title, message, category }) {
 async function sendPushToUsers({ title, message, category }) {
   const app = getFirebaseApp();
 
-  const preferenceQuery =
-    category === 'updates'
-      ? { 'notificationPreferences.updates': true }
-      : category === 'announcements' || category === 'festivals/events'
-        ? { 'notificationPreferences.announcements': true }
-        : {};
+  // Build preference query based on category
+  const preferenceQuery = {};
+  
+  if (category === 'updates') {
+    preferenceQuery['notificationPreferences.updateEnabled'] = true;
+  } else if (category === 'announcements' || category === 'festivals/events') {
+    preferenceQuery['notificationPreferences.announcementsEnabled'] = true;
+  } else if (category === 'events') {
+    preferenceQuery['notificationPreferences.eventEnabled'] = true;
+  } else if (category === 'donations') {
+    preferenceQuery['notificationPreferences.promotionalEnabled'] = true;
+  }
 
+  // Query users with push enabled, not in quiet mode, and matching category preferences
   const users = await User.find({
     is_admin: false,
-    'notificationPreferences.push': true,
+    'notificationPreferences.pushEnabled': true,
+    'notificationPreferences.quietMode': false,
     'fcmTokens.0': { $exists: true },
+    $or: [
+      { 'notificationPreferences.deliveryMode': 'push' },
+      { 'notificationPreferences.deliveryMode': 'both' }
+    ],
     ...preferenceQuery
   });
 

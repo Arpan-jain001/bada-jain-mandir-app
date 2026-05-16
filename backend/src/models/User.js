@@ -12,10 +12,15 @@ const userSchema = new mongoose.Schema(
     is_admin: { type: Boolean, default: false, index: true },
     avatar_url: String,
     notificationPreferences: {
-      email: { type: Boolean, default: true },
-      push: { type: Boolean, default: true },
-      announcements: { type: Boolean, default: true },
-      updates: { type: Boolean, default: true }
+      pushEnabled: { type: Boolean, default: true },
+      promotionalEnabled: { type: Boolean, default: false },
+      updateEnabled: { type: Boolean, default: true },
+      announcementsEnabled: { type: Boolean, default: true },
+      eventEnabled: { type: Boolean, default: true },
+      chatEnabled: { type: Boolean, default: true },
+      emailEnabled: { type: Boolean, default: true },
+      deliveryMode: { type: String, enum: ['push', 'email', 'both'], default: 'both' },
+      quietMode: { type: Boolean, default: false }
     },
     fcmTokens: [
       {

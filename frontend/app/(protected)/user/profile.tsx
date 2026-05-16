@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,10 +13,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../../stores/authStore';
 import { AppLanguage, usePreferencesStore } from '../../../stores/preferencesStore';
+import NotificationPreferencesComponent from '../../components/NotificationPreferences';
+
+type TabType = 'profile' | 'notifications';
 
 export default function ProfileScreen() {
   const { user, loading, updateProfile } = useAuthStore();
   const { language, setLanguage, t } = usePreferencesStore();
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
 
@@ -43,59 +48,98 @@ export default function ProfileScreen() {
         <Text style={styles.headerTitle}>{t('profile')}</Text>
       </LinearGradient>
 
-      <View style={styles.content}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={52} color="#FF9933" />
-        </View>
-        <Text style={styles.userName}>{user?.name}</Text>
-        <Text style={styles.userEmail}>{user?.email}</Text>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('editProfile')}</Text>
-          <Text style={styles.label}>{t('name')}</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-            placeholder={t('name')}
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'profile' && styles.activeTab]}
+          onPress={() => setActiveTab('profile')}
+        >
+          <Ionicons
+            name="person"
+            size={20}
+            color={activeTab === 'profile' ? '#FF9933' : '#999'}
           />
-          <Text style={styles.label}>{t('phone')}</Text>
-          <TextInput
-            value={phone}
-            onChangeText={setPhone}
-            style={styles.input}
-            placeholder={t('phone')}
-            keyboardType="phone-pad"
-          />
-          <TouchableOpacity style={styles.saveButton} onPress={saveProfile} disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <>
-                <Ionicons name="save" size={20} color="#FFF" />
-                <Text style={styles.saveButtonText}>{t('saveChanges')}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+          <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>
+            {t('profile')}
+          </Text>
+        </TouchableOpacity>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('language')}</Text>
-          <View style={styles.languageRow}>
-            {(['en', 'hi'] as AppLanguage[]).map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={[styles.languageButton, language === item && styles.activeLanguageButton]}
-                onPress={() => selectLanguage(item)}
-              >
-                <Text style={[styles.languageText, language === item && styles.activeLanguageText]}>
-                  {item === 'en' ? t('english') : t('hindi')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'notifications' && styles.activeTab]}
+          onPress={() => setActiveTab('notifications')}
+        >
+          <Ionicons
+            name="notifications"
+            size={20}
+            color={activeTab === 'notifications' ? '#FF9933' : '#999'}
+          />
+          <Text style={[styles.tabText, activeTab === 'notifications' && styles.activeTabText]}>
+            {t('notifications')}
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Profile Tab Content */}
+      {activeTab === 'profile' && (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={52} color="#FF9933" />
+          </View>
+          <Text style={styles.userName}>{user?.name}</Text>
+          <Text style={styles.userEmail}>{user?.email}</Text>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('editProfile')}</Text>
+            <Text style={styles.label}>{t('name')}</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              style={styles.input}
+              placeholder={t('name')}
+            />
+            <Text style={styles.label}>{t('phone')}</Text>
+            <TextInput
+              value={phone}
+              onChangeText={setPhone}
+              style={styles.input}
+              placeholder={t('phone')}
+              keyboardType="phone-pad"
+            />
+            <TouchableOpacity style={styles.saveButton} onPress={saveProfile} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Ionicons name="save" size={20} color="#FFF" />
+                  <Text style={styles.saveButtonText}>{t('saveChanges')}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('language')}</Text>
+            <View style={styles.languageRow}>
+              {(['en', 'hi'] as AppLanguage[]).map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[styles.languageButton, language === item && styles.activeLanguageButton]}
+                  onPress={() => selectLanguage(item)}
+                >
+                  <Text style={[styles.languageText, language === item && styles.activeLanguageText]}>
+                    {item === 'en' ? t('english') : t('hindi')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Notifications Tab Content */}
+      {activeTab === 'notifications' && (
+        <NotificationPreferencesComponent showHeader={false} />
+      )}
     </View>
   );
 }
@@ -104,7 +148,35 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F5F5' },
   header: { paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFF' },
-  content: { padding: 20 },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    elevation: 1,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#FF9933',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#999',
+  },
+  activeTabText: {
+    color: '#FF9933',
+  },
+  content: { flex: 1, padding: 20 },
   avatar: {
     width: 96,
     height: 96,

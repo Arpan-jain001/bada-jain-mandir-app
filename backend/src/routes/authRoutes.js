@@ -15,8 +15,15 @@ router.post('/login', loginRules, validate, auth.login);
 router.get('/me', protect, auth.me);
 router.put('/profile', protect, auth.updateProfile);
 router.put('/preferences', protect, auth.updatePreferences);
+
+// Device token management
 router.post('/device-token', protect, auth.registerFcmToken);
 router.delete('/device-token', protect, auth.removeFcmToken);
+router.get('/device-tokens', protect, auth.listDeviceTokens);
+router.post('/device-tokens/cleanup', protect, auth.cleanupDeviceTokens);
+router.post('/device-token/heartbeat', protect, auth.heartbeatDeviceToken);
+
+// Password reset
 router.post('/forgot-password', passwordResetRequestRules, validate, auth.forgotPassword);
 router.post('/resend-reset-otp', passwordResetRequestRules, validate, auth.resendPasswordResetOtp);
 router.post('/reset-password', passwordResetRules, validate, auth.resetPassword);

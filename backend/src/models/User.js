@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
         expoPushToken: String,
         platform: String,
         appVersion: String,
-        lastSeenAt: Date
+        lastSeenAt: { type: Date, default: () => new Date() }
       }
     ],
     passwordResetToken: { type: String, select: false },

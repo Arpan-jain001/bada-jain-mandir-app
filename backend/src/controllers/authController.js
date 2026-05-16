@@ -74,19 +74,121 @@ exports.updatePreferences = asyncHandler(async (req, res) => {
 
 exports.registerFcmToken = asyncHandler(async (req, res) => {
   const { token, tokenType, expoPushToken, platform, appVersion } = req.body;
-  if (!token && !expoPushToken) throw new ApiError(400, 'Device token is required');
+  
+  if (!token && !expoPushToken) {
+    throw new ApiError(400, 'At least one token (device or expo push) is required');
+  }
+
+  // Validate token format (basic check)
+  if (token && typeof token !== 'string') {
+    throw new ApiError(400, 'Invalid device token format');
+  }
+  if (expoPushToken && typeof expoPushToken !== 'string') {
+    throw new ApiError(400, 'Invalid expo push token format');
+  }
+
+  // Remove old entries with same tokens to avoid duplicates
   req.user.fcmTokens = req.user.fcmTokens.filter(
-    (entry) => entry.token !== token && entry.expoPushToken !== expoPushToken
+    (entry) =>
+      !(
+        (token && entry.token === token) ||
+        (expoPushToken && entry.expoPushToken === expoPushToken)
+      )
   );
-  req.user.fcmTokens.push({ token, tokenType, expoPushToken, platform, appVersion, lastSeenAt: new Date() });
+
+  // Limit to 5 tokens per user (prevent array bloat)
+  if (req.user.fcmTokens.length >= 5) {
+    req.user.fcmTokens = req.user.fcmTokens.slice(-4); // Keep 4 oldest, add new one
+  }
+
+  // Add new token entry
+  req.user.fcmTokens.push({
+    token: token || undefined,
+    tokenType: tokenType || undefined,
+    expoPushToken: expoPushToken || undefined,
+    platform: platform || 'unknown',
+    appVersion: appVersion || 'unknown',
+    lastSeenAt: new Date(),
+  });
+
   await req.user.save();
-  res.json({ message: 'Device token registered' });
+
+  res.json({
+    message: 'Device token registered successfully',
+    totalTokens: req.user.fcmTokens.length,
+  });
 });
 
 exports.removeFcmToken = asyncHandler(async (req, res) => {
   req.user.fcmTokens = req.user.fcmTokens.filter((entry) => entry.token !== req.body.token);
   await req.user.save();
   res.json({ message: 'Device token removed' });
+});
+
+/**
+ * Get all registered tokens for current user
+ * Used for device management UI
+ */
+exports.listDeviceTokens = asyncHandler(async (req, res) => {
+  const tokens = req.user.fcmTokens.map((t) => ({
+    platform: t.platform,
+    appVersion: t.appVersion,
+    lastSeenAt: t.lastSeenAt,
+    hasDeviceToken: !!t.token,
+    hasExpoToken: !!t.expoPushToken,
+    tokenPreview: t.token ? t.token.substring(0, 10) + '...' : null,
+  }));
+
+  res.json({
+    totalTokens: tokens.length,
+    tokens,
+  });
+});
+
+/**
+ * Clean up stale or invalid device tokens
+ * Removes tokens older than 60 days or with missing lastSeenAt
+ */
+exports.cleanupDeviceTokens = asyncHandler(async (req, res) => {
+  const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+  const initialCount = req.user.fcmTokens.length;
+
+  // Remove stale tokens
+  req.user.fcmTokens = req.user.fcmTokens.filter((token) => {
+    // Keep tokens seen recently
+    if (!token.lastSeenAt) return false; // Remove tokens without timestamp
+    return new Date(token.lastSeenAt) > sixtyDaysAgo;
+  });
+
+  const removedCount = initialCount - req.user.fcmTokens.length;
+  await req.user.save();
+
+  res.json({
+    message: 'Device tokens cleaned up',
+    removedCount,
+    remainingTokens: req.user.fcmTokens.length,
+  });
+});
+
+/**
+ * Mark current device as seen (token heartbeat)
+ * Called periodically to prevent token cleanup
+ */
+exports.heartbeatDeviceToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    throw new ApiError(400, 'Token is required');
+  }
+
+  const tokenEntry = req.user.fcmTokens.find((t) => t.token === token || t.expoPushToken === token);
+  if (!tokenEntry) {
+    throw new ApiError(404, 'Token not found');
+  }
+
+  tokenEntry.lastSeenAt = new Date();
+  await req.user.save();
+
+  res.json({ message: 'Device heartbeat recorded' });
 });
 
 exports.forgotPassword = asyncHandler(async (req, res) => {

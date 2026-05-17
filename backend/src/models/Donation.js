@@ -15,6 +15,12 @@ const donationSchema = new mongoose.Schema(
     razorpay_signature: String,
     status: { type: String, enum: ['created', 'paid', 'failed', 'refunded'], default: 'created', index: true },
     purpose: { type: String, default: 'Temple Donation' },
+    receipt_number: {
+  type: String,
+  unique: true,
+  sparse: true,
+  index: true
+},
     receipt: { type: mongoose.Schema.Types.ObjectId, ref: 'Receipt' },
     paid_at: Date,
     failure_reason: String,

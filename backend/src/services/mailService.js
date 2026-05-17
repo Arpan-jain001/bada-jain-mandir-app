@@ -1,32 +1,72 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const env = require('../config/env');
 const logger = require('../utils/logger');
 
-function getTransport() {
-  if (!env.smtp.host || !env.smtp.user || !env.smtp.pass) return null;
-  return nodemailer.createTransport({
-    host: env.smtp.host,
-    port: env.smtp.port,
-    secure: env.smtp.secure,
-    auth: { user: env.smtp.user, pass: env.smtp.pass }
-  });
+let resendClient = null;
+
+function getResendClient() {
+  if (!resendClient && env.email.apiKey) {
+    resendClient = new Resend(env.email.apiKey);
+  }
+  return resendClient;
 }
 
 async function sendMail({ to, subject, text, html, attachments }) {
-  const transport = getTransport();
-  if (!transport) {
-    logger.warn(`SMTP is not configured; skipped email to ${to}`);
+  const client = getResendClient();
+  
+  if (!client) {
+    logger.warn(`Resend API is not configured; skipped email to ${to}`);
     return { skipped: true };
   }
 
-  return transport.sendMail({
-    from: env.smtp.from || env.smtp.user,
-    to,
-    subject,
-    text,
-    html,
-    attachments
-  });
+  try {
+    // Build attachments array if provided
+    const resendAttachments = [];
+    if (attachments && Array.isArray(attachments)) {
+      for (const attachment of attachments) {
+        if (attachment.content) {
+          // Convert Buffer to base64 if needed
+          const content = Buffer.isBuffer(attachment.content) 
+            ? attachment.content.toString('base64')
+            : attachment.content;
+          
+          resendAttachments.push({
+            filename: attachment.filename,
+            content: content,
+            contentType: attachment.contentType || 'application/octet-stream'
+          });
+        }
+      }
+    }
+
+    // Send email via Resend API
+    const response = await client.emails.send({
+      from: env.email.from,
+      to,
+      subject,
+      html: html || text, // Resend requires either html or plain text
+      text: text || undefined,
+      attachments: resendAttachments.length > 0 ? resendAttachments : undefined
+    });
+
+    // Log success
+    logger.info(`Email sent successfully to ${to} via Resend (ID: ${response.id})`);
+
+    return {
+      id: response.id,
+      from: env.email.from,
+      to,
+      subject,
+      messageId: response.id
+    };
+  } catch (error) {
+    logger.error(`Failed to send email to ${to} via Resend:`, {
+      error: error.message,
+      code: error.code,
+      statusCode: error.statusCode
+    });
+    throw error;
+  }
 }
 
 module.exports = { sendMail };

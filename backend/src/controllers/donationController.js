@@ -94,6 +94,16 @@ async function completeVerifiedPayment(paymentPayload) {
   donation.razorpay_signature = razorpay_signature;
   donation.status = 'paid';
   donation.paid_at = new Date();
+  const now = new Date();
+
+const datePart =
+  now.getFullYear().toString() +
+  String(now.getMonth() + 1).padStart(2, '0') +
+  String(now.getDate()).padStart(2, '0');
+
+const randomPart = Math.floor(1000 + Math.random() * 9000);
+
+donation.receipt_number = `BJMP-${datePart}-${randomPart}`;
   await donation.save();
 
   await Transaction.create({

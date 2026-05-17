@@ -26,13 +26,9 @@ const env = {
     keySecret: process.env.RAZORPAY_KEY_SECRET,
     currency: process.env.DONATION_CURRENCY || 'INR'
   },
-  smtp: {
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: String(process.env.SMTP_SECURE).toLowerCase() === 'true',
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-    from: process.env.MAIL_FROM
+  email: {
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.EMAIL_FROM || 'noreply@example.com'
   },
   firebase: {
     serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH,

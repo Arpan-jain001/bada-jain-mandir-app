@@ -20,7 +20,8 @@ const userSchema = new mongoose.Schema(
       chatEnabled: { type: Boolean, default: true },
       emailEnabled: { type: Boolean, default: true },
       deliveryMode: { type: String, enum: ['push', 'email', 'both'], default: 'both' },
-      quietMode: { type: Boolean, default: false }
+      quietMode: { type: Boolean, default: false },
+      promotionalEmailsEnabled: { type: Boolean, default: false }
     },
     fcmTokens: [
       {

@@ -21,7 +21,9 @@ const projectSchema = new mongoose.Schema(
     image_url: { type: String, required: true },
     public_id: String,
     youtube_url: { type: String, trim: true },
-    is_active: { type: Boolean, default: true, index: true }
+    status: { type: String, enum: ['upcoming', 'ongoing', 'completed'], default: 'ongoing', index: true },
+    is_active: { type: Boolean, default: true, index: true },
+    notification_sent: { type: Boolean, default: false }
   },
   options
 );
@@ -44,10 +46,14 @@ const eventSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true, index: true },
     description: { type: String, required: true, trim: true },
     date: { type: String, required: true, index: true },
+    time: { type: String }, // HH:MM format (e.g., "07:00" or "19:30")
     image_url: String,
     public_id: String,
     category: { type: String, default: 'events' },
-    is_active: { type: Boolean, default: true, index: true }
+    status: { type: String, enum: ['upcoming', 'ongoing', 'completed', 'cancelled'], default: 'upcoming', index: true },
+    is_active: { type: Boolean, default: true, index: true },
+    notification_sent: { type: Boolean, default: false },
+    scheduled_notification_id: String // Reference to ScheduledNotification document
   },
   options
 );

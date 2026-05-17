@@ -3,7 +3,7 @@ const User = require('../models/User');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { authResponse } = require('../services/tokenService');
-const { sendMail } = require('../services/mailService');
+const { sendSystemEmail } = require('../services/emailService');
 const env = require('../config/env');
 
 function createResetOtp() {
@@ -20,9 +20,11 @@ async function sendPasswordResetOtp(email) {
   user.passwordResetToken = crypto.createHash('sha256').update(resetOtp).digest('hex');
   user.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
   await user.save();
-  await sendMail({
+  
+  // Use sendSystemEmail to ensure password reset emails are always sent
+  await sendSystemEmail({
     to: user.email,
-    subject: `Password reset OTP - ${env.appName}`,
+    subject: `Password reset OTP`,
     text: `Your password reset OTP is ${resetOtp}. It is valid for 10 minutes.`,
     html: `<p>Your password reset OTP is <strong>${resetOtp}</strong>.</p><p>It is valid for 10 minutes.</p>`
   });

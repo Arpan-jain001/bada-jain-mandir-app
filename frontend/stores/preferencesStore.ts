@@ -74,6 +74,8 @@ type TranslationKey =
   | 'projects'
   | 'projectsAndWork'
   | 'projectDetails'
+  | 'promotionalEmails'
+  | 'promotionalEmailsDesc'
   | 'promotionalNotifications'
   | 'promotionalDesc'
   | 'pushOnly'
@@ -85,6 +87,7 @@ type TranslationKey =
   | 'resetPreferencesMessage'
   | 'resetToDefaults'
   | 'saveChanges'
+  | 'securityEmailsNote'
   | 'settings'
   | 'spiritualGuidance'
   | 'spiritualGuidanceDesc'
@@ -179,6 +182,8 @@ const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
     projectDetails: 'Project Details',
     promotionalNotifications: 'Promotional Notifications',
     promotionalDesc: 'Receive special offers and promotions',
+    promotionalEmails: 'Promotional Emails',
+    promotionalEmailsDesc: 'Receive marketing emails and special offers',
     pushOnly: 'Push Only',
     quietMode: 'Quiet Mode',
     quietModeDesc: 'Mute all notifications temporarily',
@@ -188,6 +193,7 @@ const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
     resetPreferencesMessage: 'This will restore all notification settings to their default values. Continue?',
     resetToDefaults: 'Reset to Defaults',
     saveChanges: 'Save Changes',
+    securityEmailsNote: 'Security and password reset emails will always be sent.',
     settings: 'Settings',
     spiritualGuidance: 'Spiritual Guidance',
     spiritualGuidanceDesc: 'Receive personalized guidance and support on your spiritual journey from our knowledgeable team.',
@@ -279,6 +285,8 @@ const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
     projectDetails: 'प्रोजेक्ट विवरण',
     promotionalNotifications: 'प्रचारात्मक नोटिफिकेशन',
     promotionalDesc: 'विशेष ऑफर और प्रचार प्राप्त करें',
+    promotionalEmails: 'प्रचारात्मक ईमेल',
+    promotionalEmailsDesc: 'विपणन ईमेल और विशेष ऑफर प्राप्त करें',
     pushOnly: 'केवल पुश',
     quietMode: 'शांत मोड',
     quietModeDesc: 'सभी नोटिफिकेशन को अस्थायी रूप से म्यूट करें',
@@ -288,6 +296,7 @@ const translations: Record<AppLanguage, Record<TranslationKey, string>> = {
     resetPreferencesMessage: 'यह सभी नोटिफिकेशन सेटिंग्स को उनके डिफ़ॉल्ट मानों पर पुनः स्थापित करेगा। जारी रखें?',
     resetToDefaults: 'डिफ़ॉल्ट पर रीसेट करें',
     saveChanges: 'सेव करें',
+    securityEmailsNote: 'सुरक्षा और पासवर्ड रीसेट ईमेल हमेशा भेजे जाएंगे।',
     settings: 'सेटिंग्स',
     spiritualGuidance: 'आध्यात्मिक मार्गदर्शन',
     spiritualGuidanceDesc: 'हमारी टीम से अपनी आध्यात्मिक यात्रा के लिए मार्गदर्शन और सहयोग प्राप्त करें।',

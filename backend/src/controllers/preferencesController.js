@@ -31,7 +31,8 @@ exports.updateNotificationPreferences = asyncHandler(async (req, res) => {
     chatEnabled,
     emailEnabled,
     deliveryMode,
-    quietMode
+    quietMode,
+    promotionalEmailsEnabled
   } = req.body;
 
   // Validate deliveryMode if provided
@@ -51,6 +52,7 @@ exports.updateNotificationPreferences = asyncHandler(async (req, res) => {
   if (emailEnabled !== undefined) preferencesUpdate.emailEnabled = Boolean(emailEnabled);
   if (deliveryMode !== undefined) preferencesUpdate.deliveryMode = deliveryMode;
   if (quietMode !== undefined) preferencesUpdate.quietMode = Boolean(quietMode);
+  if (promotionalEmailsEnabled !== undefined) preferencesUpdate.promotionalEmailsEnabled = Boolean(promotionalEmailsEnabled);
 
   // Update user with new preferences
   const user = await User.findByIdAndUpdate(
@@ -87,7 +89,8 @@ exports.resetNotificationPreferences = asyncHandler(async (req, res) => {
     chatEnabled: true,
     emailEnabled: true,
     deliveryMode: 'both',
-    quietMode: false
+    quietMode: false,
+    promotionalEmailsEnabled: false
   };
 
   const user = await User.findByIdAndUpdate(

@@ -1,6 +1,7 @@
 const LiveDarshan = require('../models/LiveDarshan');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendPushToUsers, sendEmailToUsers } = require('../services/notificationService');
+const Notification = require('../models/Notification');
 
 function extractEmbedUrl(embedCode = '') {
   const match = String(embedCode).match(/src=["']([^"']+)["']/i);
@@ -32,12 +33,29 @@ exports.updateLiveDarshan = asyncHandler(async (req, res) => {
 
   if (isLive && req.body.notify !== false) {
     const payload = {
-      title: live.title || 'Live Darshan',
+      title: '🔴 Live Darshan Started Now',
       message: 'Live Darshan has started. Tap to watch now.',
-      category: 'live-darshan'
+      category: 'festivals/events'
     };
-    await sendPushToUsers(payload);
-    if (req.body.send_email) await sendEmailToUsers(payload);
+    
+    const results = await sendPushToUsers(payload);
+    if (req.body.send_email) {
+      await sendEmailToUsers(payload);
+    }
+    
+    // Log the notification
+    await Notification.create({
+      title: payload.title,
+      message: payload.message,
+      category: payload.category,
+      channels: { 
+        push: true, 
+        email: !!req.body.send_email 
+      },
+      results,
+      sent_by: req.user?._id,
+      sent_at: new Date()
+    });
   }
 
   res.json(live);

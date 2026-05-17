@@ -259,13 +259,14 @@ export default function NotificationPreferencesComponent({
         {/* Email Notifications */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('emailSettings')}</Text>
+          <Text style={styles.sectionDescription}>{t('securityEmailsNote')}</Text>
           <View style={styles.sectionContent}>
             <PreferenceToggle
-              label={t('emailNotifications')}
-              description={t('emailNotificationsDesc')}
-              value={preferences.emailEnabled}
-              onToggle={(value) => handleToggle('emailEnabled', value)}
-              icon="mail"
+              label={t('promotionalEmails')}
+              description={t('promotionalEmailsDesc')}
+              value={preferences.promotionalEmailsEnabled}
+              onToggle={(value) => handleToggle('promotionalEmailsEnabled', value)}
+              icon="megaphone"
             />
           </View>
         </View>

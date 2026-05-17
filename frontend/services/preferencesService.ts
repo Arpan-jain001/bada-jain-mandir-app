@@ -15,6 +15,7 @@ export interface NotificationPreferences {
   emailEnabled: boolean;
   deliveryMode: 'push' | 'email' | 'both';
   quietMode: boolean;
+  promotionalEmailsEnabled: boolean;
 }
 
 /**
@@ -70,5 +71,6 @@ export const DEFAULT_PREFERENCES: NotificationPreferences = {
   chatEnabled: true,
   emailEnabled: true,
   deliveryMode: 'both',
-  quietMode: false
+  quietMode: false,
+  promotionalEmailsEnabled: false
 };

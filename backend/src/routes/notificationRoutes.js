@@ -16,7 +16,8 @@ router.put('/preferences', protect, [
   body('chatEnabled').optional().isBoolean(),
   body('emailEnabled').optional().isBoolean(),
   body('deliveryMode').optional().isIn(['push', 'email', 'both']),
-  body('quietMode').optional().isBoolean()
+  body('quietMode').optional().isBoolean(),
+  body('promotionalEmailsEnabled').optional().isBoolean()
 ], validate, preferences.updateNotificationPreferences);
 router.post('/preferences/reset', protect, preferences.resetNotificationPreferences);
 
